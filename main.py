@@ -54,6 +54,9 @@ Clientes aptos para venta: {self.sellable_clients}
         """
 
 
+
+
+
 if __name__ == "__main__":
     # Ejemplo de uso
     path = "/home/luis/git/cmpc-europe-flushing-2023-12/STOCK.xlsx"
@@ -86,8 +89,10 @@ if __name__ == "__main__":
             },
         )
         for row in range(len(dataframe["Lote"]))
-        if dataframe["Lote"][row] not in ("", "NaN", None)
+        if dataframe["Lote"][row] not in ("", "NaN", "nan", None)
     }
 
     for batch in batches:
         print(str(batches[batch]))
+
+
