@@ -75,7 +75,7 @@ T_l = {
 Pr_lp = pulp.LpVariable.dicts("Pr", ((batch, product)
                                      for batch in Batches
                                      for product in Products),
-                             cat='Binary')
+                              cat='Binary')
 
 # Cantidad efectivamente despachada al cliente "c" del producto "p".
 D_cp = pulp.LpVariable.dicts("D", ((client, product)
@@ -96,6 +96,21 @@ R_l = {
     batch: B ** T_l[batch]
     for batch in Batches
 }
+
+# -------------------------
+
+# Definir variables para la parte positiva y negativa de la diferencia entre
+# exportaciones y demandas
+Diff_Pos = pulp.LpVariable.dicts("Diff_Pos", ((client, product)
+                                              for client in Clients for
+                                              product in Products),
+                                 lowBound=0,
+                                 cat='Continuous')
+Diff_Neg = pulp.LpVariable.dicts("Diff_Neg", ((client, product)
+                                              for client in Clients
+                                              for product in Products),
+                                 lowBound=0,
+                                 cat='Continuous')
 
 # -------------------------- VARIABLES DE DECISIÓN --------------------------
 # Indica si se envía el lote "l" al cliente "c" este mes
@@ -151,4 +166,50 @@ for l in Batches:
         model += (A_lc[l][c] >= E_lc[(l, c)],
                   f"Sale_Possibility_Batch_{l}_Client_{c}")
 
+# Agregar restricciones para definir la parte positiva y
+# negativa de la diferencia
+for c in Clients:
+    for p in Products:
+        model += (DDA_cp[c][p] - D_cp[(c, p)] ==
+                  Diff_Pos[(c, p)] - Diff_Neg[(c, p)],
+                  f"Difference_Pos_Neg_{c}_{p}")
 
+
+# -------------------------- FUNCIÓN OBJETIVO --------------------------
+objective = (
+        # Primer término: Importancia del cliente por satisfacción de demanda
+        pulp.lpSum(
+            W_s * S_cp[(c, p)] * I_c[c]
+            for c in Clients
+            for p in Products) -
+
+        # Segundo término: Penalización por la diferencia entre la demanda y
+        # la cantidad despachada
+        pulp.lpSum(W_diff * (Diff_Pos[(c, p)] + Diff_Neg[(c, p)])
+                   for c in Clients
+                   for p in Products) +
+
+        # Tercer término: Valor del lote enviado ponderado por la prioridad
+        # del lote
+        pulp.lpSum(R_l[l] * E_lc[(l, c)]
+                   for l in Batches
+                   for c in Clients)
+)
+
+# Establecer la función objetivo en el modelo
+model += (objective, "Total_Value")
+
+
+# -----------------------------------------------------------------------------
+
+# Resolver el problema
+model.solve()
+
+# Verificar el estado de la solución
+if pulp.LpStatus[model.status] == 'Optimal':
+    print("Solución óptima encontrada!")
+    # Aquí podrías imprimir los valores de las variables de decisión y otros detalles relevantes
+    for v in model.variables():
+        print(f"{v.name} = {v.varValue}")
+else:
+    print("No se encontró una solución óptima. Estado:", pulp.LpStatus[model.status])
