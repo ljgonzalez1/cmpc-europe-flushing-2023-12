@@ -77,16 +77,29 @@ def get_batches_from_stocks(
     return batches
 
 def get_client_requests_from_sales(
-        stocks_path="/home/luis/git/cmpc-europe-flushing-2023-12/VENTAS.xlsx",
-        stocks_sheet="Ventas",
-        this_month=):
+        sales_path="/home/luis/git/cmpc-europe-flushing-2023-12/VENTAS.xlsx",
+        sales_sheet="Ventas",
+        this_month="VENTAS_PROGRAMA"):
 
+    dataframe = excel2dataframe(sales_path, sales_sheet, skip_rows=0)
+    df = dataframe.dropna(subset=['ID de cliente CMPC'])
 
+    client_requests = {
+        (df["ID de cliente CMPC"][row], df["ID de producto"][row]):
+            {"client_description": df["Descripción de cliente 2"][row],
+             "client_id": df["ID de cliente CMPC"][row],
+             "client_group": df["Descripción del grupo de cliente"][row],
+             "product": df["ID de producto"][row],
+             "requested_amount": int(df["VENTAS_PROGRAMA"][row])}
+        for row in range(len(df["ID de cliente CMPC"]))
+    }
+
+    return client_requests
 
 # ------------------------------------------
 
-a = get_batches_from_stocks()
-for b in a:
-    print(str(a[b]))
+a = get_client_requests_from_sales()
+for i in a:
+    print(f"{i}: {a[i]}")
 
 

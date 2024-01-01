@@ -167,14 +167,20 @@ for l in Batches:
                   f"Sale_Possibility_Batch_{l}_Client_{c}")
 
 # Agregar restricciones para definir la parte positiva y
-# negativa de la diferencia
+# negativa de la diferencia de demanda y oferta
 for c in Clients:
     for p in Products:
         model += (DDA_cp[c][p] - D_cp[(c, p)] ==
                   Diff_Pos[(c, p)] - Diff_Neg[(c, p)],
                   f"Difference_Pos_Neg_{c}_{p}")
 
-
+# 11. Si un cliente no pide nada de un producto, no se le puede vender dicho
+# producto.
+for c in Clients:
+    for p in Products:
+        model += (pulp.lpSum(E_lc[(l, c)] for l in Batches)
+                  <= DDA_cp[c][p] * 999999999999999999999999999999999999999999,
+                  f"No_vender_al_que_no_quiere_{c}_{p}")
 # -------------------------- FUNCIÓN OBJETIVO --------------------------
 objective = (
         # Primer término: Importancia del cliente por satisfacción de demanda
