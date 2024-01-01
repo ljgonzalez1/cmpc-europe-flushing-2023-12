@@ -42,9 +42,6 @@ Clientes aptos para venta: {self.sellable_clients}
         """
 
 
-
-
-
 if __name__ == "__main__":
     # Ejemplo de uso
     path = "/home/luis/git/cmpc-europe-flushing-2023-12/STOCK.xlsx"
