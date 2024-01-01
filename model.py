@@ -219,7 +219,6 @@ model.solve()
 # Verificar el estado de la solución
 # if pulp.LpStatus[model.status] == 'Optimal':
 #     print("Solución óptima encontrada!")
-#     # Aquí podrías imprimir los valores de las variables de decisión y otros detalles relevantes
 #     for v in model.variables():
 #         print(f"{v.name} = {v.varValue}")
 if pulp.LpStatus[model.status] == 'Optimal':
