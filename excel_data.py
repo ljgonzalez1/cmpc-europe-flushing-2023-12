@@ -48,7 +48,7 @@ class Batch:
         self.batch_id = str(batch_id)
         self.product_id = str(product_id)
 
-        self.mass = int(arrived_mass + mass_in_transit)
+        self.mass = float(arrived_mass + mass_in_transit)
 
         self.sellable_clients = defaultdict(bool)
 
@@ -226,12 +226,25 @@ def get_client_product_demand() -> dict:
     demand_data = defaultdict(int)
     clients_data_dict = get_client_requests_from_sales()
 
-    for client, product in clients_data_dict:
-        demand_data[(client, product)] = clients_data_dict[
-            (client, product)]["requested_amount"]
+    for product in get_products():
+        for client in get_clients():
+            if (client, product) in clients_data_dict.keys():
+                demand_data[(client, product)] = clients_data_dict[
+                    (client, product)]["requested_amount"]
+
+            else:
+                demand_data[(client, product)] = 0
 
     return demand_data
 
+
+def get_binary_client_demand():
+    demand_data = get_client_product_demand()
+
+    demand_data_bin = {key: 1 if demand_data[key] else 0
+                       for key in demand_data.keys()}
+
+    return demand_data_bin
 # ------------------------------------------
 
 
@@ -241,8 +254,7 @@ if __name__ == "__main__":
     for i in a:
         print(f"{i}: {a[i]}")
 
-
-    print(get_client_batch_compatibility())
-    a = get_client_batch_compatibility()
+    print(get_client_product_demand())
+    a = get_binary_client_demand()
     for i in a:
         print(f"{i}: {a[i]}")

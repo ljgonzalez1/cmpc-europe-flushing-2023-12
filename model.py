@@ -28,6 +28,10 @@ W_diff = 65536
 # Base de la potencia para la prioridad de embarque de lotes.
 B = 1.1
 
+# Un número suficientemente grande, debe ser mayor que cualquier valor de D_cp y DDA_cp
+M = 134217728
+
+
 # -------------------------------- PARÁMETROS --------------------------------
 # Si el cliente es apto o no para recibir un lote particular
 client_batch_compatibility = excel_data.get_client_batch_compatibility()
@@ -37,6 +41,15 @@ A_lc = {
         for client in Clients
     }
     for batch in Batches
+}
+
+client_product_compatibility = excel_data.get_client_product_demand()
+X_cp = {
+    client: {
+        product: client_product_compatibility[(client, product)]
+        for product in Products
+    }
+    for client in Clients
 }
 
 batch_objects = excel_data.get_batches_from_stocks()
@@ -133,22 +146,43 @@ for l in Batches:
               f"Un_producto_por_lote_{l.replace(' ', '_')}")
 
 # 2. Definición cantidad despachada al cliente "c" del producto "p":
-for c in Clients:
-    for p in Products:
-        model += (
-            pulp.lpSum(E_lc[(l, c)] * M_l[l]
-                       for l in Batches) == D_cp[(c, p)],
-            f"Cantidad_despachada_a_cliente_{c}_de_"
-            f"producto_{p.replace(' ', '_')}"
-        )
+# for c in Clients:
+#     for p in Products:
+#         model += (
+#             pulp.lpSum(E_lc[(l, c)] * M_l[l]
+#                        for l in Batches) == D_cp[(c, p)],
+#             f"Cantidad_despachada_a_cliente_{c}_de_"
+#             f"producto_{p.replace(' ', '_')}"
+#         )
 
 # 3. Cumplimiento de la demanda del cliente "c" por el producto "p":
-for c in Clients:
-    for p in Products:
-        model += (
-            D_cp[(c, p)] >= DDA_cp[c][p] * S_cp[(c, p)],
-            f"Satisfaccion_dda_cliente_{c}_producto_"
-            f"{p.replace(' ', '_')}")
+### for c in Clients:
+###     for p in Products:
+###         model += (
+###             D_cp[(c, p)] >= DDA_cp[c][p] * S_cp[(c, p)],
+###             f"Satisfaccion_dda_cliente_{c}_producto_"
+###             f"{p.replace(' ', '_')}_p1")
+###
+### for c in Clients:
+###     for p in Products:
+###         model += (
+###             D_cp[(c, p)] * (1 - S_cp[(c, p)]) < DDA_cp[c][p],
+###             f"Satisfaccion_dda_cliente_{c}_producto_"
+###             f"{p.replace(' ', '_')}_p2")
+# for c in Clients:
+#     for p in Products:
+#         # Si S_cp es 1 (demanda satisfecha), esta restricción es siempre satisfecha.
+#         # Si S_cp es 0, fuerza D_cp < DDA_cp
+#         model += (D_cp[(c, p)] >= DDA_cp[c][p] - M * (1 - S_cp[(c, p)]),
+#                   f"Satisfaccion_dda_cliente_{c}_producto_{p.replace(' ', '_')}_p1")
+#
+# for c in Clients:
+#     for p in Products:
+#         # Si S_cp es 0 (demanda no satisfecha), esta restricción es siempre satisfecha.
+#         # Si S_cp es 1, fuerza D_cp >= DDA_cp
+#         model += (D_cp[(c, p)] <= DDA_cp[c][p] + M * S_cp[(c, p)],
+#                   f"Satisfaccion_dda_cliente_{c}_producto_{p.replace(' ', '_')}_p2")
+
 
 # 4. Cada lote puede ser despachado a un solo cliente
 for l in Batches:
@@ -156,15 +190,15 @@ for l in Batches:
               f"Un_client_por_lote_{l}")
 
 # 5. Un lote puede no ser despachado este mes
-for l in Batches:
-    model += (pulp.lpSum(E_lc[(l, c)] for c in Clients) >= 0,
-              f"Un_lote_puede_no_ser_despachado_{l}")
+# for l in Batches:
+#     model += (pulp.lpSum(E_lc[(l, c)] for c in Clients) >= 0,
+#               f"Un_lote_puede_no_ser_despachado_{l}")
 
 # 7. Tiempo Máximo de Lote en Espera de cada lote
-for l in Batches:
-    model += (T_l[l] * (1 - pulp.lpSum(E_lc[(l, c)]
-                                       for c in Clients)) <= T_max,
-              f"Tiempo_espera_max_lote_{l}")
+# for l in Batches:
+#     model += (T_l[l] * (1 - pulp.lpSum(E_lc[(l, c)]
+#                                        for c in Clients)) <= T_max,
+#               f"Tiempo_espera_max_lote_{l}")
 
 # 9. Posibilidad de venta del lote l al cliente c
 for l in Batches:
@@ -180,12 +214,12 @@ for c in Clients:
                   Diff_Pos[(c, p)] - Diff_Neg[(c, p)],
                   f"Difference_Pos_Neg_{c}_{p}")
 
-# 11. Si un cliente no pide nada de un producto, no se le puede vender dicho producto.
-# for c in Clients:
-#     for p in Products:
-#         if DDA_cp[c][p] == 0:  # Si la demanda es cero
-#             model += (pulp.lpSum(E_lc[(l, c)] for l in Batches) == 0,
-#                       f"No_vender_al_que_no_quiere_{c}_{p}")
+# 10. Si un cliente no pide nada de un producto, no se le puede vender dicho producto.
+for c in Clients:
+    for p in Products:
+        model += (X_cp[c][p] * M >= D_cp[(c, p)],
+                  f"No_vender_al_que_no_quiere_{c}_{p}")
+
 # -------------------------- FUNCIÓN OBJETIVO --------------------------
 objective = (
         # Primer término: Importancia del cliente por satisfacción de demanda
@@ -214,7 +248,8 @@ model += (objective, "Total_Value")
 # -----------------------------------------------------------------------------
 
 # Resolver el problema
-model.solve()
+solver = pulp.PULP_CBC_CMD(timeLimit=15)
+model.solve(solver)
 
 # Verificar el estado de la solución
 # if pulp.LpStatus[model.status] == 'Optimal':
@@ -225,7 +260,7 @@ if pulp.LpStatus[model.status] == 'Optimal':
     print("Solución óptima encontrada!")
     # Filtrar e imprimir solo las variables que comienzan con "E_" y no son 0
     for v in model.variables():
-        if v.name.startswith("E_"): #and v.varValue != 0:  # Filtrar por nombre y valor
-            print(f"{v.name} = {v.varValue}")
+        # if v.name.startswith("E_") and v.varValue != 0:  # Filtrar por nombre y valor
+        print(f"{v.name} = {v.varValue}")
 else:
     print("No se encontró una solución óptima. Estado:", pulp.LpStatus[model.status])
