@@ -8,13 +8,13 @@ model = pulp.LpProblem("Optimizacion_de_Distribucion",
 
 # -------------------------------- CONJUNTOS --------------------------------
 # Definir el conjunto de clientes
-Clients = [client for client in excel_data.get_clients()]
+Clients = {str(client) for client in set(excel_data.get_clients())}
 
 # Definir el conjunto de productos
-Products = [product for product in excel_data.get_products()]
+Products = {str(product) for product in set(excel_data.get_products())}
 
 # Definir el conjunto de lotes
-Batches = [batch for batch in excel_data.get_batches()]
+Batches = {str(batch) for batch in set(excel_data.get_batches())}
 
 # -------------------------------- CONSTANTES --------------------------------
 # Máximo tiempo de espera en bodega en días
@@ -138,7 +138,7 @@ for c in Clients:
         model += (
             pulp.lpSum(E_lc[(l, c)] * M_l[l]
                        for l in Batches) == D_cp[(c, p)],
-            f"Cantidad_despachada_a_cliente_{c.replace(' ', '_')}_de_"
+            f"Cantidad_despachada_a_cliente_{c}_de_"
             f"producto_{p.replace(' ', '_')}"
         )
 
@@ -147,7 +147,7 @@ for c in Clients:
     for p in Products:
         model += (
             D_cp[(c, p)] >= DDA_cp[c][p] * S_cp[(c, p)],
-            f"Satisfaccion_dda_cliente_{c.replace(' ', '_')}_producto_"
+            f"Satisfaccion_dda_cliente_{c}_producto_"
             f"{p.replace(' ', '_')}")
 
 # 4. Cada lote puede ser despachado a un solo cliente
@@ -180,13 +180,12 @@ for c in Clients:
                   Diff_Pos[(c, p)] - Diff_Neg[(c, p)],
                   f"Difference_Pos_Neg_{c}_{p}")
 
-# 11. Si un cliente no pide nada de un producto, no se le puede vender dicho
-# producto.
-for c in Clients:
-    for p in Products:
-        model += (pulp.lpSum(E_lc[(l, c)] for l in Batches)
-                  <= DDA_cp[c][p] * 999999999999999999999999999999999999999999,
-                  f"No_vender_al_que_no_quiere_{c}_{p}")
+# 11. Si un cliente no pide nada de un producto, no se le puede vender dicho producto.
+# for c in Clients:
+#     for p in Products:
+#         if DDA_cp[c][p] == 0:  # Si la demanda es cero
+#             model += (pulp.lpSum(E_lc[(l, c)] for l in Batches) == 0,
+#                       f"No_vender_al_que_no_quiere_{c}_{p}")
 # -------------------------- FUNCIÓN OBJETIVO --------------------------
 objective = (
         # Primer término: Importancia del cliente por satisfacción de demanda
@@ -218,10 +217,16 @@ model += (objective, "Total_Value")
 model.solve()
 
 # Verificar el estado de la solución
+# if pulp.LpStatus[model.status] == 'Optimal':
+#     print("Solución óptima encontrada!")
+#     # Aquí podrías imprimir los valores de las variables de decisión y otros detalles relevantes
+#     for v in model.variables():
+#         print(f"{v.name} = {v.varValue}")
 if pulp.LpStatus[model.status] == 'Optimal':
     print("Solución óptima encontrada!")
-    # Aquí podrías imprimir los valores de las variables de decisión y otros detalles relevantes
+    # Filtrar e imprimir solo las variables que comienzan con "E_" y no son 0
     for v in model.variables():
-        print(f"{v.name} = {v.varValue}")
+        if v.name.startswith("E_") and v.varValue != 0:  # Filtrar por nombre y valor
+            print(f"{v.name} = {v.varValue}")
 else:
     print("No se encontró una solución óptima. Estado:", pulp.LpStatus[model.status])

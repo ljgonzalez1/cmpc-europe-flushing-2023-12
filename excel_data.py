@@ -93,7 +93,7 @@ def get_client_requests_from_sales(
              "client_id": df["ID de cliente CMPC"][row],
              "client_group": df["Descripción del grupo de cliente"][row],
              "product": df["ID de producto"][row],
-             "requested_amount": int(df["VENTAS_PROGRAMA"][row])}
+             "requested_amount": int(df[this_month][row])}
         for row in range(len(df["ID de cliente CMPC"]))
     }
 
@@ -134,7 +134,7 @@ def get_batches():
 
 
 def get_client_batch_compatibility():
-    compatibility_data = dict()
+    compatibility_data = defaultdict(int)
     batches_objects = get_batches_from_stocks()
     clients = get_clients()
 
@@ -148,7 +148,7 @@ def get_client_batch_compatibility():
 
 
 def get_client_product_demand():
-    demand_data = dict()
+    demand_data = defaultdict(int)
     clients_data_dict = get_client_requests_from_sales()
 
     for client, product in clients_data_dict:
@@ -159,10 +159,10 @@ def get_client_product_demand():
 
 # ------------------------------------------
 
-
-print(get_batches_from_stocks())
-a = get_batches_from_stocks()
-for i in a:
-    print(f"{i}: {a[i]}")
+if __name__ == "__main__":
+    print(get_batches_from_stocks())
+    a = get_batches_from_stocks()
+    for i in a:
+        print(f"{i}: {a[i]}")
 
 
