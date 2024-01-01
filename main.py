@@ -11,25 +11,18 @@ class Batch:
     def __init__(self,
                  center_name, mill,
                  ship, shipping_date,
-                 batch, product,
-                 bale_quantity, mass, gross_mass,
-                 bales_in_transit, mass_in_transit, gross_mass_in_transit,
+                 batch_id, product_id,
+                 arrived_mass, mass_in_transit,
                  sellable_clients):
         self.center_name = center_name
         self.mill = mill
         self.ship = ship
 
         self.shipping_date = shipping_date
-        self.batch = batch
-        self.product = product
+        self.batch_id = batch_id
+        self.product_id = product_id
 
-        self.bale_quantity = bale_quantity
-        self.mass = mass
-        self.gross_mass = gross_mass
-
-        self.bales_in_transit = bales_in_transit
-        self.mass_in_transit = mass_in_transit
-        self.gross_mass_in_transit = gross_mass_in_transit
+        self.mass = arrived_mass + mass_in_transit
 
         self.sellable_clients = defaultdict(bool)
 
@@ -42,14 +35,9 @@ Nombre Centro: {self.center_name}
 Planta: {self.mill}
 Nave: {self.ship}
 Fecha Nave: {self.shipping_date}
-Lote: {self.batch}
-Material: {self.product}
-Fardos Arrib (LU): {self.bale_quantity}
-Net Arrib (LU): {self.mass}
-KG Brut Arrib (LU): {self.gross_mass}
-Fardos en tráns: {self.bales_in_transit}
-Net en Tráns: {self.mass_in_transit}
-KG Brut en tráns: {self.gross_mass_in_transit}
+Lote: {self.batch_id}
+Material: {self.product_id}
+Masa neto (LU): {self.mass}
 Clientes aptos para venta: {self.sellable_clients}
         """
 
@@ -61,7 +49,8 @@ if __name__ == "__main__":
     # Ejemplo de uso
     path = "/home/luis/git/cmpc-europe-flushing-2023-12/STOCK.xlsx"
     sheet = "Format"
-    dataframe = excel2dataframe(path, sheet, skip_rows=1)
+    df = excel2dataframe(path, sheet, skip_rows=1)
+    dataframe = df.dropna(subset=['Lote'])
 
     clients_number_code = [col for col in dataframe.columns if
                           str(col).isdigit()]
@@ -72,14 +61,10 @@ if __name__ == "__main__":
             mill=dataframe["Planta"][row],
             ship=dataframe["Nave"][row],
             shipping_date=dataframe["Fecha Nave"][row],
-            batch=dataframe["Lote"][row],
-            product=dataframe["Material"][row],
-            bale_quantity=dataframe["Fardos Arrib (LU)"][row],
-            mass=dataframe["Net Arrib (LU)"][row],
-            gross_mass=dataframe["KG Brut Arrib (LU)"][row],
-            bales_in_transit=dataframe["Fardos en tráns"][row],
+            batch_id=dataframe["Lote"][row],
+            product_id=dataframe["Material"][row],
+            arrived_mass=dataframe["Net Arrib (LU)"][row],
             mass_in_transit=dataframe["Net en Tráns"][row],
-            gross_mass_in_transit=dataframe["KG Brut en tráns"][row],
             sellable_clients={
                 str(client_number_code):
                     [any(character.isdigit()
