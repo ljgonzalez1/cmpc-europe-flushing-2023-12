@@ -39,14 +39,14 @@ class Batch:
                  batch_id, product_id,
                  arrived_mass, mass_in_transit,
                  sellable_clients):
-        self.center_name = center_name
-        self.mill = mill
-        self.ship = ship
+        self.center_name = str(center_name)
+        self.mill = str(mill)
+        self.ship = str(ship)
 
         shipping_date_timestamp = pd.to_datetime(shipping_date)
         self.shipping_date_epoch = int(shipping_date_timestamp.timestamp())
-        self.batch_id = batch_id
-        self.product_id = product_id
+        self.batch_id = str(batch_id)
+        self.product_id = str(product_id)
 
         self.mass = int(arrived_mass + mass_in_transit)
 
@@ -104,12 +104,11 @@ def get_batches_from_stocks(
             arrived_mass=dataframe["Net Arrib (LU)"][row],
             mass_in_transit=dataframe["Net en Tráns"][row],
             sellable_clients={
-                str(client_number_code): [
+                str(client_number_code):
                     any(
                         character.isdigit()
                         for character in str(dataframe[client_number_code][row])
                     )
-                ]
                 for client_number_code in clients_number_code
             },
         )
@@ -139,11 +138,11 @@ def get_client_requests_from_sales(
     df = dataframe.dropna(subset=["ID de cliente CMPC"])
 
     client_requests = {
-        (df["ID de cliente CMPC"][row], df["ID de producto"][row]): {
-            "client_description": df["Descripción de cliente 2"][row],
-            "client_id": df["ID de cliente CMPC"][row],
-            "client_group": df["Descripción del grupo de cliente"][row],
-            "product": df["ID de producto"][row],
+        (str(df["ID de cliente CMPC"][row]), str(df["ID de producto"][row])): {
+            "client_description": str(df["Descripción de cliente 2"][row]),
+            "client_id": str(df["ID de cliente CMPC"][row]),
+            "client_group": str(df["Descripción del grupo de cliente"][row]),
+            "product": str(df["ID de producto"][row]),
             "requested_amount": int(df[this_month][row]),
         }
         for row in range(len(df["ID de cliente CMPC"]))
@@ -164,10 +163,10 @@ def get_products():
     batches = get_batches_from_stocks()
 
     for entry in sales:
-        product_ids.add(sales[entry]["product"])
+        product_ids.add(str(sales[entry]["product"]))
 
     for entry in batches:
-        product_ids.add(batches[entry].product_id)
+        product_ids.add(str(batches[entry].product_id))
 
     return product_ids
 
@@ -184,17 +183,17 @@ def get_clients():
     batches = get_batches_from_stocks()
 
     for entry in sales:
-        client_ids.add(sales[entry]["client_id"])
+        client_ids.add(str(sales[entry]["client_id"]))
 
     for entry in batches:
         for key in batches[entry].sellable_clients.keys():
-            client_ids.add(key)
+            client_ids.add(str(key))
 
     return client_ids
 
 
 def get_batches():
-    return {key for key in get_batches_from_stocks().keys()}
+    return {str(key) for key in get_batches_from_stocks().keys()}
 
 
 def get_client_batch_compatibility() -> dict:
@@ -239,5 +238,11 @@ def get_client_product_demand() -> dict:
 if __name__ == "__main__":
     print(get_batches_from_stocks())
     a = get_batches_from_stocks()
+    for i in a:
+        print(f"{i}: {a[i]}")
+
+
+    print(get_client_batch_compatibility())
+    a = get_client_batch_compatibility()
     for i in a:
         print(f"{i}: {a[i]}")

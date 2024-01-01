@@ -225,7 +225,7 @@ if pulp.LpStatus[model.status] == 'Optimal':
     print("Solución óptima encontrada!")
     # Filtrar e imprimir solo las variables que comienzan con "E_" y no son 0
     for v in model.variables():
-        if v.name.startswith("E_") and v.varValue != 0:  # Filtrar por nombre y valor
+        if v.name.startswith("E_"): #and v.varValue != 0:  # Filtrar por nombre y valor
             print(f"{v.name} = {v.varValue}")
 else:
     print("No se encontró una solución óptima. Estado:", pulp.LpStatus[model.status])
