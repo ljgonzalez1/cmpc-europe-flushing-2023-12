@@ -47,9 +47,10 @@ M_l = {
 }
 
 # Demanda que el cliente "c" tiene por el producto "p".
-DDA_cp = {  # TODO: Placeholder
+client_demands = excel_data.get_client_product_demand()
+DDA_cp = {
     client: {
-        product: 100
+        product: client_demands[(client, product)]
         for product in Products
     }
     for client in Clients

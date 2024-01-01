@@ -22,7 +22,7 @@ class Batch:
         self.batch_id = batch_id
         self.product_id = product_id
 
-        self.mass = arrived_mass + mass_in_transit
+        self.mass = int(arrived_mass + mass_in_transit)
 
         self.sellable_clients = defaultdict(bool)
 
