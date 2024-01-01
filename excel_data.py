@@ -76,6 +76,7 @@ def get_batches_from_stocks(
 
     return batches
 
+
 def get_client_requests_from_sales(
         sales_path="/home/luis/git/cmpc-europe-flushing-2023-12/VENTAS.xlsx",
         sales_sheet="Ventas",
@@ -96,10 +97,45 @@ def get_client_requests_from_sales(
 
     return client_requests
 
+
+def get_products():
+    product_ids = set()
+    sales = get_client_requests_from_sales()
+    batches = get_batches_from_stocks()
+
+    for entry in sales:
+        product_ids.add(sales[entry]["product"])
+
+    for entry in batches:
+        product_ids.add(batches[entry].product_id)
+
+    return product_ids
+
+
+def get_clients():
+    client_ids = set()
+    sales = get_client_requests_from_sales()
+    batches = get_batches_from_stocks()
+
+    for entry in sales:
+        client_ids.add(sales[entry]["client_id"])
+
+    for entry in batches:
+        for key in batches[entry].sellable_clients.keys():
+            client_ids.add(key)
+
+    return client_ids
+
+
+def get_batches():
+    return {key for key in get_batches_from_stocks().keys()}
+
 # ------------------------------------------
 
-a = get_client_requests_from_sales()
-for i in a:
-    print(f"{i}: {a[i]}")
+
+print(get_batches())
+# a = get_batches_from_stocks()
+# for i in a:
+#     print(f"{i}: {a[i]}")
 
 
