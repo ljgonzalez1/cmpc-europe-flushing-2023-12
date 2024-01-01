@@ -44,7 +44,7 @@ Clientes aptos para venta: {self.sellable_clients}
 
 
 def get_batches_from_stocks(
-        stocks_path="/home/luis/git/cmpc-europe-flushing-2023-12/STOCK.xlsx",
+        stocks_path="./STOCK.xlsx",
         stocks_sheet="Format"):
     path = stocks_path
     sheet = stocks_sheet
@@ -79,7 +79,7 @@ def get_batches_from_stocks(
 
 
 def get_client_requests_from_sales(
-        sales_path="/home/luis/git/cmpc-europe-flushing-2023-12/VENTAS.xlsx",
+        sales_path="./VENTAS.xlsx",
         sales_sheet="Ventas",
         this_month="VENTAS_PROGRAMA"):
 
