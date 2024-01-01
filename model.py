@@ -1,18 +1,20 @@
 import time
 import pulp
 
+import excel_data
+
 model = pulp.LpProblem("Optimizacion_de_Distribucion",
                        pulp.LpMaximize)
 
 # -------------------------------- CONJUNTOS --------------------------------
 # Definir el conjunto de clientes
-Clients = [f"Client{i}" for i in range(13)]
+Clients = [client for client in excel_data.get_clients()]
 
 # Definir el conjunto de productos
-Products = [f"Product{i}" for i in range(3)]
+Products = [product for product in excel_data.get_products()]
 
 # Definir el conjunto de lotes
-Batches = [f"Batch{i}" for i in range(80)]
+Batches = [batch for batch in excel_data.get_batches()]
 
 # -------------------------------- CONSTANTES --------------------------------
 # Máximo tiempo de espera en bodega en días
@@ -27,18 +29,20 @@ W_diff = 65536
 B = 1.1
 
 # -------------------------------- PARÁMETROS --------------------------------
-# Si el cliente es apto o no para recibir un lite particular
-A_lc = {  # TODO: Placeholder
+# Si el cliente es apto o no para recibir un lote particular
+client_batch_compatibility = excel_data.get_client_batch_compatibility()
+A_lc = {
     batch: {
-        client: 1
+        client: client_batch_compatibility[(client, batch)]
         for client in Clients
     }
     for batch in Batches
 }
 
+batch_objects = excel_data.get_batches()
 # Masa del lote
-M_l = {  # TODO: Placeholder
-    batch: 1000
+M_l = {
+    batch: batch_objects[batch].mass
     for batch in Batches
 }
 
