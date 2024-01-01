@@ -18,7 +18,8 @@ class Batch:
         self.mill = mill
         self.ship = ship
 
-        self.shipping_date = shipping_date
+        shipping_date_timestamp = pd.to_datetime(shipping_date)
+        self.shipping_date_epoch = int(shipping_date_timestamp.timestamp())
         self.batch_id = batch_id
         self.product_id = product_id
 
@@ -34,7 +35,7 @@ class Batch:
 Nombre Centro: {self.center_name}
 Planta: {self.mill}
 Nave: {self.ship}
-Fecha Nave: {self.shipping_date}
+Fecha Nave: {self.shipping_date_epoch}
 Lote: {self.batch_id}
 Material: {self.product_id}
 Masa neto (LU): {self.mass}
@@ -159,8 +160,8 @@ def get_client_product_demand():
 # ------------------------------------------
 
 
-print(get_client_product_demand())
-a = get_client_product_demand()
+print(get_batches_from_stocks())
+a = get_batches_from_stocks()
 for i in a:
     print(f"{i}: {a[i]}")
 

@@ -62,9 +62,10 @@ I_c = {  # TODO: Placeholder
     for client in Clients
 }
 
-# Fecha de arribo (epoch) del lote "l"
-F_l = {  # TODO: Placeholder
-    batch: T_f - 2
+# Fecha de arribo (epoch convertido a días) del lote "l"
+batch_objects = excel_data.get_batches()
+F_l = {
+    batch: batch_objects[batch].shipping_date_epoch // (3600 * 24)
     for batch in Batches
 }
 
