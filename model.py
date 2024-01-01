@@ -39,7 +39,7 @@ A_lc = {
     for batch in Batches
 }
 
-batch_objects = excel_data.get_batches()
+batch_objects = excel_data.get_batches_from_stocks()
 # Masa del lote
 M_l = {
     batch: batch_objects[batch].mass
@@ -63,7 +63,7 @@ I_c = {  # TODO: Placeholder
 }
 
 # Fecha de arribo (epoch convertido a días) del lote "l"
-batch_objects = excel_data.get_batches()
+batch_objects = excel_data.get_batches_from_stocks()
 F_l = {
     batch: batch_objects[batch].shipping_date_epoch // (3600 * 24)
     for batch in Batches
