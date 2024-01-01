@@ -42,10 +42,11 @@ Clientes aptos para venta: {self.sellable_clients}
         """
 
 
-if __name__ == "__main__":
-    # Ejemplo de uso
-    path = "/home/luis/git/cmpc-europe-flushing-2023-12/STOCK.xlsx"
-    sheet = "Format"
+def get_batches_from_stocks(
+        stocks_path="/home/luis/git/cmpc-europe-flushing-2023-12/STOCK.xlsx",
+        stocks_sheet="Format"):
+    path = stocks_path
+    sheet = stocks_sheet
     df = excel2dataframe(path, sheet, skip_rows=1)
     dataframe = df.dropna(subset=['Lote'])
 
@@ -71,10 +72,21 @@ if __name__ == "__main__":
             },
         )
         for row in range(len(dataframe["Lote"]))
-        if dataframe["Lote"][row] not in ("", "NaN", "nan", None)
     }
 
-    for batch in batches:
-        print(str(batches[batch]))
+    return batches
+
+def get_client_requests_from_sales(
+        stocks_path="/home/luis/git/cmpc-europe-flushing-2023-12/VENTAS.xlsx",
+        stocks_sheet="Ventas",
+        this_month=):
+
+
+
+# ------------------------------------------
+
+a = get_batches_from_stocks()
+for b in a:
+    print(str(a[b]))
 
 
