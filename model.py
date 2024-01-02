@@ -35,11 +35,9 @@ M = 134217728
 # Si el cliente es apto o no para recibir un lote particular
 client_batch_compatibility = excel_data.get_client_batch_compatibility()
 A_lc = {
-    batch: {
-        client: client_batch_compatibility[(client, batch)]
-        for client in Clients
-    }
-    for batch in Batches
+    (l, c): client_batch_compatibility[(c, l)]
+    for l in Batches
+    for c in Clients
 }
 
 client_product_compatibility = excel_data.get_client_product_demand()
@@ -53,50 +51,43 @@ X_cp = {
 
 batch_product_match = excel_data.get_batch_product_binary()
 P_lp = {
-    batch: {
-        product: batch_product_match[(batch, product)]
-        for product in Products
-    }
-    for batch in Batches
+    (l, p): batch_product_match[(l, p)]
+    for p in Products
+    for l in Batches
 }
 
 batch_objects = excel_data.get_batches_from_stocks()
 # Masa del lote
 M_l = {
-    batch: batch_objects[batch].mass
-    for batch in Batches
+    (l, ): batch_objects[l].mass
+    for l in Batches
 }
 
 # Demanda que el cliente "c" tiene por el producto "p".
 client_demands = excel_data.get_client_product_demand()
 DDA_cp = {
-    client: {
-        product: client_demands[(client, product)]
-        for product in Products
-    }
-    for client in Clients
+    (c, p): client_demands[(c, p)]
+    for p in Products
+    for c in Clients
 }
 
 # Prioridad del cliente "c".
 I_c = {  # TODO: Placeholder
-    client: 1
-    for client in Clients
+    (c, ): 1
+    for c in Clients
 }
 
 # Fecha de arribo (epoch convertido a días) del lote "l"
 batch_objects = excel_data.get_batches_from_stocks()
 F_l = {
-    batch: batch_objects[batch].shipping_date_epoch
-    for batch in Batches
+    (l, ): batch_objects[l].shipping_date_epoch
+    for l in Batches
 }
 
 # --------------------------- VARIABLES AUXILIARES ---------------------------
 
 # Tiempo en días que el lote "l" lleva en espera.
-T_l = {
-    batch: max(0, int((T_f - F_l[batch]) // (24 * 3600)))
-    for batch in Batches
-}
+T_l: dict
 
 # Cantidad efectivamente despachada al cliente "c" del producto "p".
 D_cp = pulp.LpVariable.dicts("D", ((client, product)
@@ -147,6 +138,23 @@ E_lc = pulp.LpVariable.dicts("E", ((batch, client)
                              cat='Binary')
 
 # ------------------------------ RESTRICCIONES -------------------------------
+### DEFINICIONES
+
+# 1. Definición de D_cp:
+for c in Clients:
+    for p in Products:
+        model += (
+            D_cp[(c, p)] == pulp.lpSum(E_lc[(l, c)] * M_l[l] for l in Batches),
+            f"Definición cantidad despachada al cliente {c} del producto {p}"
+        )
+
+# 2. Definición
+T_l = {
+    (l, ): max(0, int((T_f - F_l[l]) // (24 * 3600)))
+    for l in Batches
+}
+
+
 
 # 2. Definición cantidad despachada al cliente "c" del producto "p":
 # for c in Clients:
