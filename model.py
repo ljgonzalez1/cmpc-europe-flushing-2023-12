@@ -147,6 +147,7 @@ E_lc = pulp.LpVariable.dicts("E", ((batch, client)
                              cat='Binary')
 
 # ------------------------------ RESTRICCIONES -------------------------------
+
 # 2. Definición cantidad despachada al cliente "c" del producto "p":
 # for c in Clients:
 #     for p in Products:
@@ -187,9 +188,9 @@ E_lc = pulp.LpVariable.dicts("E", ((batch, client)
 
 
 # 4. Cada lote puede ser despachado a un solo cliente
-for l in Batches:
-    model += (pulp.lpSum(E_lc[(l, c)] for c in Clients) <= 1,
-              f"Un_client_por_lote_{l}")
+# for l in Batches:
+#     model += (pulp.lpSum(E_lc[(l, c)] for c in Clients) <= 1,
+#               f"Un_client_por_lote_{l}")
 
 # 5. Un lote puede no ser despachado este mes
 # for l in Batches:
@@ -203,35 +204,35 @@ for l in Batches:
 #               f"Tiempo_espera_max_lote_{l}")
 
 # 9. Posibilidad de venta del lote l al cliente c
-for l in Batches:
-    for c in Clients:
-        model += (A_lc[l][c] >= E_lc[(l, c)],
-                  f"Sale_Possibility_Batch_{l}_Client_{c}")
+# for l in Batches:
+#     for c in Clients:
+#         model += (A_lc[l][c] >= E_lc[(l, c)],
+#                   f"Sale_Possibility_Batch_{l}_Client_{c}")
 
 # Agregar restricciones para definir la parte positiva y
 # negativa de la diferencia de demanda y oferta
-for c in Clients:
-    for p in Products:
-        model += (DDA_cp[c][p] - D_cp[(c, p)] ==
-                  Diff_Pos[(c, p)] - Diff_Neg[(c, p)],
-                  f"Difference_Pos_Neg_{c}_{p}")
+# for c in Clients:
+#     for p in Products:
+#         model += (DDA_cp[c][p] - D_cp[(c, p)] ==
+#                   Diff_Pos[(c, p)] - Diff_Neg[(c, p)],
+#                   f"Difference_Pos_Neg_{c}_{p}")
 
 # 10. Si un cliente no pide nada de un producto, no se le puede vender dicho producto.
-for c in Clients:
-    for p in Products:
-        model += (X_cp[c][p] * M >= D_cp[(c, p)],
-                  f"No_vender_al_que_no_quiere_{c}_{p}")
+# for c in Clients:
+#     for p in Products:
+#         model += (X_cp[c][p] * M >= D_cp[(c, p)],
+#                   f"No_vender_al_que_no_quiere_{c}_{p}")
 
 
 
 # ¿?  --  Estoy cansado, esoero acordarme
 ## Pr_{lp} \cdot DDA_{cp} \geq E_{lc}
 
-for c in Clients:
-    for p in Products:
-        for l in Batches:
-            model += (X_cp[c][p] * Pr_lp[l][p] >= E_lc[(l, c)],
-                      f"Pr_lp \cdot DDA_cp \geq E_lc___{c}_{p}_{l}")
+# for c in Clients:
+#     for p in Products:
+#         for l in Batches:
+#             model += (X_cp[c][p] * Pr_lp[l][p] >= E_lc[(l, c)],
+#                       f"Pr_lp \cdot DDA_cp \geq E_lc___{c}_{p}_{l}")
 
 
 # -------------------------- FUNCIÓN OBJETIVO --------------------------
@@ -262,19 +263,17 @@ model += (objective, "Total_Value")
 # -----------------------------------------------------------------------------
 
 # Resolver el problema
-solver = pulp.PULP_CBC_CMD(timeLimit=15)
+solver = pulp.PULP_CBC_CMD(timeLimit=5)
 model.solve(solver)
 
 # Verificar el estado de la solución
-# if pulp.LpStatus[model.status] == 'Optimal':
-#     print("Solución óptima encontrada!")
-#     for v in model.variables():
-#         print(f"{v.name} = {v.varValue}")
 if pulp.LpStatus[model.status] == 'Optimal':
     print("Solución óptima encontrada!")
     # Filtrar e imprimir solo las variables que comienzan con "E_" y no son 0
     for v in model.variables():
-        if v.name.startswith("E_") and v.varValue != 0:  # Filtrar por nombre y valor
+        # Filtrar por nombre y valor
+        if v.name.startswith("E_") and v.varValue != 0:
             print(f"{v.name} = {v.varValue}")
 else:
-    print("No se encontró una solución óptima. Estado:", pulp.LpStatus[model.status])
+    print("No se encontró una solución óptima. Estado:",
+          pulp.LpStatus[model.status])
