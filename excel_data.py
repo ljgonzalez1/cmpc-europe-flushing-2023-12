@@ -217,12 +217,6 @@ def get_client_batch_compatibility() -> dict:
 
 
 def get_client_product_demand() -> dict:
-    """
-    This function returns a dictionary containing the demand for each product by each client.
-
-    Returns:
-        dict: A dictionary containing the demand for each product by each client, where the keys are tuples of (client ID, product ID) and the values are integers indicating the demand.
-    """
     demand_data = defaultdict(int)
     clients_data_dict = get_client_requests_from_sales()
 
@@ -245,7 +239,27 @@ def get_binary_client_demand():
                        for key in demand_data.keys()}
 
     return demand_data_bin
+
+
+def get_batch_product_binary() -> dict:
+    batches = get_batches()
+    products = get_products()
+    batches_object = get_batches_from_stocks()
+
+    batch_product = defaultdict(int)
+
+    for product in products:
+        for batch in batches:
+            if product == batches_object[batch].product_id:
+                batch_product[(batch, product)] = 1
+
+            else:
+                batch_product[(batch, product)] = 0
+
+    return batch_product
+
 # ------------------------------------------
+
 
 
 if __name__ == "__main__":
@@ -254,7 +268,7 @@ if __name__ == "__main__":
     for i in a:
         print(f"{i}: {a[i]}")
 
-    print(get_client_product_demand())
-    a = get_binary_client_demand()
+    print(get_batch_product_binary())
+    a = get_batch_product_binary()
     for i in a:
         print(f"{i}: {a[i]}")
