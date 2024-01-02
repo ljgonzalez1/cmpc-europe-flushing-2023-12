@@ -104,11 +104,7 @@ S_cp = pulp.LpVariable.dicts("S", ((client, product)
 
 # Prioridad por entregar un lote.
 # Aumenta a medida adquiere antigüedad
-R_l = {
-    batch: max(B ** T_l[batch], 0)
-    for batch in Batches
-}
-
+R_l: dict
 # -------------------------
 
 # Definir variables para la parte positiva y negativa de la diferencia entre
@@ -148,11 +144,18 @@ for c in Clients:
             f"Definición cantidad despachada al cliente {c} del producto {p}"
         )
 
-# 2. Definición
+# 2. Definición de T_l
 T_l = {
     (l, ): max(0, int((T_f - F_l[l]) // (24 * 3600)))
     for l in Batches
 }
+
+# 3. Definición de R_l:
+R_l = {
+    batch: max(B ** T_l[batch], 0)
+    for batch in Batches
+}
+
 
 
 
