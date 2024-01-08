@@ -1,7 +1,7 @@
 import time
 import pulp
 
-import excel_data
+import excel_batches
 
 model = pulp.LpProblem("Optimizacion_de_Distribucion",
                        pulp.LpMaximize)
