@@ -3,13 +3,13 @@ from collections import defaultdict
 
 from excel_batches import get_batches_from_stocks
 from excel_requests import get_sales_data
+from excel_priority import get_client_priority_data
 
 
 def get_raw_data():
-    batches_data = get_batches_from_stocks()
-    requests_data = get_sales_data()
-    return {"batches": batches_data,
-            "requests": requests_data}
+    return {"batches": get_batches_from_stocks(),
+            "requests": get_sales_data(),
+            "importance": get_client_priority_data()}
 
 # ------------------------------------------------------------
 
@@ -166,10 +166,17 @@ def get_clients_data_table(batches_data, requests_data):
 # | 18375      | 1                                           |
 # | ...        | ...                                         |
 # FIXME: placeholder
-def get_clients_priorities_table(batches_data, requests_data):
+def get_clients_priorities_table(batches_data, request_data, importance_data):
+    clients = get_all_clients(batches_data, request_data)
+    data = defaultdict(lambda: 0.0)
+
+    for index in importance_data.keys():
+        data[importance_data[index].client_id] = importance_data[index].importance
+
     return pandas.DataFrame({
-        "client_id": get_all_clients(batches_data, requests_data),
-        "priority": 10
+        "client_id": clients,
+        "priority": [data[client]
+                     for client in clients]
     })
 
 
@@ -268,34 +275,23 @@ def get_compatibility_client_batch_table(batches_data, requests_data):
 
     compatibility_table = pandas.DataFrame({
         "client_id": [client for client, batch in compatibility_dict.keys()],
-        "batch_----------------"
-        ""
-        ""
-        ""
-        ""
-        ""
-        ""
-        ""
-        ""
-        ""
-        ""
-        ""
-        ""
-        "id": [batch for client, batch in compatibility_dict.keys()],
+        "batch_id": [batch for client, batch in compatibility_dict.keys()],
         "apt": [compatibility_dict[key] for key in compatibility_dict.keys()]
     })
 
     return compatibility_table
 
-
-
 if __name__ == "__main__":
-    request_data_dict, batches_data_dict = get_raw_data()["requests"], get_raw_data()["batches"]
+    (request_data_dict,
+     batches_data_dict,
+     importance_data_dict) = (get_raw_data()["requests"],
+                              get_raw_data()["batches"],
+                              get_raw_data()["importance"])
 
-    print(get_all_clients(batches_data_dict, request_data_dict))
-    print(get_all_locations(batches_data_dict, request_data_dict))
-    print(get_all_products(batches_data_dict, request_data_dict))
-    print(get_all_batches(batches_data_dict))
+    print("Clients", get_all_clients(batches_data_dict, request_data_dict))
+    print("Locations", get_all_locations(batches_data_dict, request_data_dict))
+    print("Products", get_all_products(batches_data_dict, request_data_dict))
+    print("Batches", get_all_batches(batches_data_dict))
 
     print()
     print()
@@ -309,7 +305,7 @@ if __name__ == "__main__":
     print(get_clients_data_table(batches_data_dict, request_data_dict))
     print()
 
-    print(get_clients_priorities_table(batches_data_dict, request_data_dict))
+    print(get_clients_priorities_table(batches_data_dict, request_data_dict, importance_data_dict))
     print()
 
     print(get_batches_volumes_table(batches_data_dict))
