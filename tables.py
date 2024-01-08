@@ -165,7 +165,6 @@ def get_clients_data_table(batches_data, requests_data):
 # | 18820      | 10                                          |
 # | 18375      | 1                                           |
 # | ...        | ...                                         |
-# FIXME: placeholder
 def get_clients_priorities_table(batches_data, request_data, importance_data):
     clients = get_all_clients(batches_data, request_data)
     data = defaultdict(lambda: 0.0)
