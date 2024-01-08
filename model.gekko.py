@@ -44,8 +44,8 @@ Batches = getBatches(batches_data)
 # la demanda del cliente.
 sale_excess = 15
 
-# Base de la potencia para la importancia de egreso de lotes
-pow_base = 1.1
+# Factor de importancia de egreso de lotes
+batch_egress_weight = 7
 
 # -------------=================== PARÁMETROS ===================------------ #
 # Prioridad de ventas para el cliente c ∈ C.
@@ -97,11 +97,11 @@ for client in Clients:
 
 # -------------------------
 
-# Antigüedad del lote b ∈ B.
+# Antigüedad del lote b ∈ B en días.
 now = time()
 
 T_b = {
-    (row['batch_id'], ): pow_base ** (now - row['ship_date_epoch']) // (24 * 3600)
+    (row['batch_id'], ): (now - row['ship_date_epoch']) // (24 * 3600)
     for _, row in batchesVolumesTable(batches_data).iterrows()
 }
 
@@ -111,14 +111,14 @@ for batch in Batches:
 # -------------------------
 
 # Variable binaria que indica si el cliente c ∈ C está en la ubicación u ∈ U.
-LC_cu = {
+LC_cl = {
     (row['client_id'], row['client_location']): 1
     for _, row in clientLocationTable(requests_data).iterrows()
 }
 
 for client in Clients:
     for location in Locations:
-        LC_cu.setdefault((client, location), 0)
+        LC_cl.setdefault((client, location), 0)
 
 # -------------------------
 
@@ -132,6 +132,11 @@ for location in Locations:
     LB_b.setdefault((location, ), 0)
 
 # -------------============== VARIABLES AUXILIARES ==============------------ #
+
+# Despenalización por no acercarse a la demanda
+W_cp = {(client, product): model.Var(lb=0, ub=1, integer=False)
+        for client in Clients for product in Products}
+
 # -------------============= VARIABLES DE DECISIÓN ==============------------ #
 
 # Indica si el lote b ∈ B está asignado al cliente c ∈ C.
@@ -144,10 +149,47 @@ S_cp = {(client, product): model.Var(lb=0, ub=1, integer=True)
 
 # -------------================= RESTRICCIONES ==================------------ #
 
-# Aptitud del lote (Compatibilidad Cliente-Lote):
-# Unicidad del lote (Asignación Única):
-# Satisfacción de la demanda del cliente (Límites de Despacho):
-# Ubicación del cliente y lote (Coincidencia de Ubicación):
+# # Aptitud del lote (Compatibilidad Cliente-Lote):
+for client in Clients:
+    for batch in Batches:
+        model.Equation(
+            X_cb[(client, batch)] <= A_cb[(client, batch)]
+        )
+
+# # Unicidad del lote (Asignación Única):
+for batch in Batches:
+    model.Equation(
+        sum(X_cb[(client, batch)] for client in Clients) <= 1
+    )
+
+# # Satisfacción de la demanda del cliente (Límites de Despacho):
+for client in Clients:
+    for product in Products:
+        model.Equation(
+            sum(X_cb[(client, batch)] * V_b[(batch, )]
+                for batch in Batches) >= D_cp[(client, product)]
+        )
+
+        model.Equation(
+            sum(X_cb[(client, batch)] * V_b[(batch, )]
+                for batch in Batches) - D_cp[(client, product)] <= sale_excess
+        )
+
+# # Ubicación del cliente y lote (Coincidencia de Ubicación):
+for client in Clients:
+    for batch in Batches:
+        # Encontrar si alguna de las ubicaciones del cliente coincide con la ubicación del lote.
+        # Si ninguna coincide, entonces el lote no puede ser asignado a ese cliente.
+        model.Equation(sum(LC_cl.get((client, LB_b[(batch, )]), 0) for loc in Locations) * X_cb[(client, batch)] <= 1)
+
+# # Definición de W_cp
+# for client in Clients:
+#     for product in Products:
+#         model.Equation(
+#             W_cp == P_c[(client, )] *
+#             (1 / (1 + model.abs2(D_cp[(client, product)] - sum(X_cb[(client, batch)] * V_b[(batch, )]
+#                                                                for batch in Batches))))
+#         )
 
 # -------------================ FUNCIÓN OBJETIVO ================------------ #
 # Maximizar la prioridad de los clientes y la satisfacción de la demanda,
@@ -156,4 +198,23 @@ S_cp = {(client, product): model.Var(lb=0, ub=1, integer=True)
 # los clientes más importantes y gestionar eficientemente el inventario de
 # lotes.
 
+model.Maximize(
+    model.sum([
+        P_c[(c, )] * S_cp[(c, p)] * X_cb[(c, b)] * W_cp[(c, p)] -
+        batch_egress_weight * T_b[(b, )] * X_cb[(c, b)]
+        for c in Clients
+        for p in Products
+        for b in Batches
+    ])
+)
+
+
 # -------------=================== EJECUCIÓN ====================------------ #
+# Soluciona el problema
+model.solve(disp=True)
+
+# Resultados
+for c in Clients:
+    for b in Batches:
+        if X[c,b].value[0] > 0.5:  # Asumiendo una pequeña tolerancia
+            print(f"Lote {b} asignado a Cliente {c}: {X[c,b].value[0]}")
