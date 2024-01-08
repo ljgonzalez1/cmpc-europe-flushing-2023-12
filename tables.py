@@ -280,6 +280,7 @@ def get_compatibility_client_batch_table(batches_data, requests_data):
 
     return compatibility_table
 
+
 if __name__ == "__main__":
     (request_data_dict,
      batches_data_dict,
