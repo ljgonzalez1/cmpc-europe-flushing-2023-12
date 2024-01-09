@@ -1,7 +1,5 @@
-import numpy as np
+import pyomo.environ as pyomo
 
-from gekko import GEKKO
-from pandas import DataFrame
 from time import time
 
 from tables import get_raw_data  # Dict
@@ -17,14 +15,15 @@ from tables import (get_sales_table as salesTable,  # DataFrame
                     get_clients_priorities_table as clientPriorityTable,  # DataFrame
                     get_batches_volumes_table as batchesVolumesTable,  # DataFrame
                     get_batches_locations_table as batchesLocationsTable,  # DataFrame
-                    get_compatibility_client_batch_table as compatibilityTable)  # DataFrame
+                    get_compatibility_client_batch_table as compatibilityTable)
 
 # -------------===================== MODELO =====================------------ #
 
-# Inicializa el modelo Gekko
-model = GEKKO(remote=False)
+# Crear un modelo
+model = pyomo.ConcreteModel()
 
 # -------------=================== CONJUNTOS ====================------------ #
+
 raw_data = get_raw_data()
 batches_data = raw_data["batches"]
 requests_data = raw_data["requests"]
@@ -32,12 +31,27 @@ importance_data = raw_data["importance"]
 
 # Conjunto de clientes (ID).
 Clients = getClients(batches_data, requests_data)
+model.Clients = pyomo.Set(initialize=Clients)
+
 # Conjunto de ubicaciones.
 Locations = getLocations(batches_data, requests_data)
+model.Locations = pyomo.Set(initialize=Locations)
+
 # Conjunto de productos (ID).
 Products = getProducts(batches_data, requests_data)
+model.Products = pyomo.Set(initialize=Products)
+
 # Conjunto de lotes (ID).
 Batches = getBatches(batches_data)
+model.Batches = pyomo.Set(initialize=Batches)
+
+# Crear conjunto para índices cruzados
+model.ClientBatchPairs = pyomo.Set(initialize=[(c, b) for c in Clients for b in Batches])
+model.ClientProductsPairs = pyomo.Set(initialize=[(c, p) for c in Clients for p in Products])
+model.ClientLocationPairs = pyomo.Set(initialize=[(c, l) for c in Clients for l in Locations])
+model.BatchLocationPairs = pyomo.Set(initialize=[(b, l) for b in Batches for l in Locations])
+model.ClientBatchPairs = pyomo.Set(initialize=[(c, b) for c in Clients for b in Batches])
+
 
 # -------------=================== CONSTANTES ===================------------ #
 # Máxima cantidad en toneladas que se puede exceder en el despacho respecto a
@@ -59,6 +73,8 @@ P_c = {
 for client in Clients:
     P_c.setdefault((client, ), 0)
 
+model.P_c = pyomo.Param(model.Clients, initialize=P_c)
+
 # -------------------------
 
 # Indica si el lote b ∈ B es apto para el cliente c ∈ C.
@@ -72,6 +88,9 @@ for client in Clients:
     for batch in Batches:
         A_cb.setdefault((client, batch), 0)
 
+model.A_cb = pyomo.Param(model.ClientBatchPairs, initialize=A_cb)
+
+
 # -------------------------
 
 #  Volumen disponible en el lote b ∈ B.
@@ -82,6 +101,9 @@ V_b = {
 
 for batch in Batches:
     V_b.setdefault((batch, ), 0)
+
+model.V_b = pyomo.Param(model.Batches, initialize=V_b)
+
 
 # -------------------------
 
@@ -94,6 +116,9 @@ D_cp = {
 for client in Clients:
     for product in Products:
         D_cp.setdefault((client, product), 0)
+
+model.D_cp = pyomo.Param(model.ClientProductsPairs, initialize=D_cp)
+
 
 # -------------------------
 
@@ -108,6 +133,8 @@ T_b = {
 for batch in Batches:
     T_b.setdefault((batch, ), 1)
 
+model.T_b = pyomo.Param(model.Batches, initialize=T_b)
+
 # -------------------------
 
 # Variable binaria que indica si el cliente c ∈ C está en la ubicación u ∈ U.
@@ -119,6 +146,9 @@ LC_cl = {
 for client in Clients:
     for location in Locations:
         LC_cl.setdefault((client, location), 0)
+
+model.LC_cl = pyomo.Param(model.ClientLocationPairs, initialize=LC_cl, within=pyomo.Binary)
+
 
 # -------------------------
 
@@ -132,77 +162,74 @@ for batch in Batches:
     for location in Locations:
         LB_b.setdefault((batch, location), 0)
 
+model.LB_b = pyomo.Param(model.BatchLocationPairs, initialize=LB_b, within=pyomo.Binary)
+
 # -------------============== VARIABLES AUXILIARES ==============------------ #
 
-# # Despenalización por no acercarse a la demanda
-# W_cp = {(client, product): model.Var(lb=0, ub=1, integer=False)
-#         for client in Clients for product in Products}
-
-# # Satisfacción de la demanda del cliente c ∈ C por el producto p ∈ P.
-# S_cp = {(client, product): model.Var(lb=0, ub=1, integer=True)
-#         for client in Clients for product in Products}
-
 # -------------============= VARIABLES DE DECISIÓN ==============------------ #
-
 # Indica si el lote b ∈ B está asignado al cliente c ∈ C.
-X_cb = {(client, batch): model.Var(lb=0, ub=1, integer=True)
-        for client in Clients for batch in Batches}
+model.X_cb = pyomo.Var(model.ClientBatchPairs, domain=pyomo.Binary)
+
 
 # -------------================= RESTRICCIONES ==================------------ #
-
 # # Ver si podemos entregar un lote a un cliente
 # # Aptitud del lote (Compatibilidad Cliente-Lote):
 # # X_cb <= A_cb          ∀ c ∈ C, b ∈ B
-# for client in Clients:
-#     for batch in Batches:
-#         model.Equation(
-#             X_cb[(client, batch)] <= A_cb[(client, batch)]
-#         )
+def batch_apt_for_client_rule(model, c, b):
+    return (
+            model.X_cb[c, b] <= model.A_cb[c, b]
+    )
+
+
+model.batch_apt_for_client = pyomo.Constraint(model.Clients, model.Batches,
+                                              rule=batch_apt_for_client_rule)
+
+
+# -------------------------------
 
 # # Cada lote puede ser enviado hasta una sola vez.
 # # Unicidad del lote (Asignación Única):
 # # Σ_c (X_cb) <= 1       ∀ b ∈ B
-for batch in Batches:
-    model.Equation(
-        model.sum([X_cb[(client, batch)] for client in Clients]) <= 1
+def unique_batch_asignation_rule(model, b):
+    return (
+            sum(model.X_cb[c, b] for c in model.Clients) <= 1
     )
 
-# # No se puede vender más de `sale_excess` toneladas por sobre lo que un cliente pide.
-# # Σ_b (X_bp * V_b) <= D_cp + sale_excess    ∀ c ∈ C, p ∈ P
-for client in Clients:
-    for product in Products:
-        model.Equation(
-            sum(X_cb[(client, batch)] * V_b[(batch, )]
-                for batch in Batches) >= D_cp[(client, product)] + sale_excess
-        )
+
+model.unique_batch_asignation_rule = pyomo.Constraint(model.Batches,
+                                                      rule=unique_batch_asignation_rule)
+
+
+# -------------------------------
+
+def max_sale_rule(model, c, p):
+    return (
+            sum(model.X_cb[c, b] * model.V_b[b] for b in model.Batches) <= model.D_cp[c, p] + sale_excess
+    )
+
+
+model.max_sale = pyomo.Constraint(model.Clients, model.Products, rule=max_sale_rule)
 
 
 # -------------================ FUNCIÓN OBJETIVO ================------------ #
-# Maximizar la prioridad de los clientes y la satisfacción de la demanda,
-# mientras se minimiza la antigüedad de los lotes asignados, considerando la
-# ubicación de los lotes. Este objetivo busca un equilibrio entre atender a
-# los clientes más importantes y gestionar eficientemente el inventario de
-# lotes.
-
-model.Maximize(
-    model.sum([
-        X_cb[(c, b)]
-        for c in Clients
-        for b in Batches
-    ])
+model.objective = pyomo.Objective(
+    expr=sum(model.X_cb[c, b] for c in model.Clients for b in model.Batches),
+    sense=pyomo.maximize
 )
 
 # -------------=================== EJECUCIÓN ====================------------ #
-# Soluciona el problema
-model.solve(disp=True)
 
+# Solucionador
+glpk_path = r'C:\Users\Luis\Desktop\git\cmpc-europe-flushing-2023-12\winglpk-4.65\glpk-4.65\w64'
+solver = pyomo.SolverFactory('glpk', executable=glpk_path + '/glpsol.exe')
+solver.solve(model)
+
+# Mostrar resultados
 count = 0
-
-# Resultados
-for c in Clients:
-    for b in Batches:
-        if X_cb[(c, b)].value[0] >= 0.5:  # Asumiendo una pequeña tolerancia
+for c in model.Clients:
+    for b in model.Batches:
+        if model.X_cb[c, b].value >= 0.5:  # Asumiendo una pequeña tolerancia
             count += 1
-            print(f"Lote {b} asignado a Cliente {c}: {X_cb[(c, b)].value[0]}")
+            print(f"Lote {b} asignado a Cliente {c}: {model.X_cb[c, b].value}")
 
-print(count)
+print("Total de lotes asignados:", count)
