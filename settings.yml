@@ -6,3 +6,16 @@ priority:
   columns:
     client_id: 'client_id'
     importance: 'importance'
+
+requests:
+  file:
+    path: './STOCK.xlsx'
+    sheet: 'Ventas'
+
+  columns:
+    this_month: 'JAN 2024'
+    client_description: 'Descripción de cliente 2'
+    client_id: 'ID de cliente CMPC'
+    client_group_description: 'Descripción del grupo de cliente'
+    location: 'Ubicación'
+    product_id: 'ID de producto'

@@ -19,7 +19,7 @@ def dict_to_namedtuple(name, dictionary):
 
 
 def load_config(filename='settings.yml'):
-    with open(filename, 'r') as file:
+    with open(filename, 'r', encoding='utf8') as file:
         config_dict = yaml.safe_load(file)
     return dict_to_namedtuple('Config', config_dict)
 
