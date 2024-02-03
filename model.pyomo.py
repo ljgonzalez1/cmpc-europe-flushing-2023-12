@@ -56,7 +56,7 @@ model.ClientBatchPairs = pyomo.Set(initialize=[(c, b) for c in Clients for b in 
 # -------------=================== CONSTANTES ===================------------ #
 # Máxima cantidad en toneladas que se puede exceder en el despacho respecto a
 # la demanda del cliente.
-sale_excess = 15
+sale_excess = 50
 
 # Factor de importancia de egreso de lotes
 batch_egress_weight = 7
@@ -202,9 +202,12 @@ model.unique_batch_asignation_rule = pyomo.Constraint(model.Batches,
 
 # -------------------------------
 
+# # No se puede vender más de `sale_excess` toneladas por sobre lo que un cliente pide.
+# # Σ_b (X_bp * V_b) <= D_cp + sale_excess    ∀ c ∈ C, p ∈ P
 def max_sale_rule(model, c, p):
     return (
-            sum(model.X_cb[c, b] * model.V_b[b] for b in model.Batches) <= model.D_cp[c, p] + sale_excess
+            sum(model.X_cb[c, b] * model.V_b[b] for b in model.Batches) <=
+            model.D_cp[c, p] + sale_excess
     )
 
 
