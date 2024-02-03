@@ -19,3 +19,19 @@ requests:
     client_group_description: 'Descripción del grupo de cliente'
     location: 'Ubicación'
     product_id: 'ID de producto'
+
+batches:
+  file:
+    path: './STOCK.xlsx'
+    sheet: 'Format'
+    extra_rows: 1
+
+  columns:
+    guide_column: 'Lote'
+    batch_id: 'Lote'
+    ship_date: 'Fecha Nave'
+    mill: 'Planta'
+    center_name: 'Nombre Centro'
+    product_id: 'Material'
+    arrived_mass: 'Net Arrib (LU)'
+    mass_in_transit: 'Net en Tráns'
