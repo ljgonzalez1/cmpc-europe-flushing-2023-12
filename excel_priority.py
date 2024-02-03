@@ -1,6 +1,8 @@
 import pandas as pd
-from collections import Hashable
+from collections.abc import Hashable
 from typing import Dict, Union
+
+from settings import config
 
 
 class Priority:
@@ -34,16 +36,14 @@ class Priority:
         self.importance = float(priority)
 
     def __str__(self) -> str:
-        return f"""
-ID de cliente: {self.client_id}
-Importancia del cliente: {self.importance}
-        """
+        return f"""ID de cliente: {self.client_id}
+Importancia del cliente: {self.importance}"""
 
 
 def get_client_priority_data(
-    file_path: str = "./PRIORIDADES.xlsx",
-    file_sheet: str = "Hoja1",
-    clients_col: str = "client_id",
+    file_path: str = config.priority.file.path,
+    file_sheet: str = config.priority.file.sheet,
+    clients_col: str = config.priority.columns.client_id,
     skip_rows: int = 0
 ) -> Dict[Hashable, Priority]:
     """
@@ -78,7 +78,7 @@ def get_client_priority_data(
     priority = {
         index: Priority(
             client_id=row[clients_col],
-            priority=row["importance"]
+            priority=row[config.priority.columns.importance]
         )
         for index, row in dataframe.iterrows()
     }
@@ -91,4 +91,4 @@ if __name__ == "__main__":
     print(data)
 
     for entry in data:
-        print(entry, data[entry])
+        print(entry, data[entry], '\n', sep='\n')

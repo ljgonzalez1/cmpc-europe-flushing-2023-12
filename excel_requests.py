@@ -1,5 +1,6 @@
 import pandas as pd
-from collections import defaultdict
+from collections.abc import Hashable
+from typing import Dict, Union
 
 
 class Request:
@@ -9,7 +10,7 @@ class Request:
                  client_group_description: str,
                  location: str,
                  product_id: str,
-                 requested: int or float):
+                 requested: Union[int, float]) -> None:
         self.client_description = client_description.title()
         self.client_id = int(client_id)
         self.client_group_description = client_group_description.title()
@@ -33,7 +34,7 @@ def get_sales_data(
     file_sheet: str = "Ventas",
     this_month_col: str = "JAN 2024",
     skip_rows: int = 0
-) -> dict:
+) -> Dict[Hashable, Request]:
 
     df = pd.read_excel(file_path, sheet_name=file_sheet, skiprows=skip_rows)
     dataframe = df.dropna(subset=[this_month_col])
@@ -54,7 +55,8 @@ def get_sales_data(
 
 
 if __name__ == "__main__":
-    data = get_sales_data()
+    data = get_sales_data(file_path='STOCK.xlsx',
+                          file_sheet='Ventas')
     print(data)
 
     for entry in data:

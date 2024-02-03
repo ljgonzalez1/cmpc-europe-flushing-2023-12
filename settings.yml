@@ -1,0 +1,8 @@
+priority:
+  file:
+    path: './PRIORIDADES.xlsx'
+    sheet: 'Hoja1'
+
+  columns:
+    client_id: 'client_id'
+    importance: 'importance'
