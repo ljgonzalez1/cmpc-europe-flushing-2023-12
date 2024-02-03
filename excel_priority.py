@@ -1,15 +1,38 @@
 import pandas as pd
-from collections import defaultdict
-from typing import
+from collections import Hashable
+from typing import Dict, Union
 
 
 class Priority:
+    """
+    Representa la prioridad asignada a un cliente.
+
+    Atributos
+    ----------
+    client_id : int
+        Identificador del cliente.
+    importance : float
+        Nivel de importancia o prioridad asignada al cliente.
+
+    Métodos
+    -------
+    __str__()
+        Representación en cadena del objeto Priority.
+
+    Ejemplo
+    -------
+    >>> priority = Priority(123, 5.0)
+    >>> print(priority)
+    ID de cliente: 123
+    Importancia del cliente: 5.0
+    """
 
     def __init__(self,
-                 client_id: int or str,
-                 priority: float or int = 0):
+                 client_id: Union[int, str],
+                 priority: Union[float, int] = 0) -> None:
         self.client_id = int(client_id)
         self.importance = float(priority)
+
     def __str__(self) -> str:
         return f"""
 ID de cliente: {self.client_id}
@@ -22,7 +45,32 @@ def get_client_priority_data(
     file_sheet: str = "Hoja1",
     clients_col: str = "client_id",
     skip_rows: int = 0
-) -> dict:
+) -> Dict[Hashable, Priority]:
+    """
+    Lee un archivo Excel y extrae datos de prioridad de clientes.
+
+    Parámetros
+    ----------
+    file_path : str, opcional
+        Ruta al archivo Excel con los datos de prioridad.
+    file_sheet : str, opcional
+        Nombre de la hoja de cálculo a leer.
+    clients_col : str, opcional
+        Nombre de la columna que contiene los identificadores de los clientes.
+    skip_rows : int, opcional
+        Número de filas a omitir al principio del archivo.
+
+    Devuelve
+    -------
+    Dict[int, Priority]
+        Un diccionario con índices de fila como claves y objetos Priority como valores.
+
+    Ejemplo
+    -------
+    >>> data = get_client_priority_data()
+    >>> for index, priority in data.items():
+    ...     print(f"Index: {index}, Cliente: {priority.client_id}, Importancia: {priority.importance}")
+    """
 
     df = pd.read_excel(file_path, sheet_name=file_sheet, skiprows=skip_rows)
     dataframe = df.dropna(subset=[clients_col])
